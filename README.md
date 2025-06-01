@@ -131,6 +131,27 @@ RAGFLOW_API_KEY=your_ragflow_api_key
 RAGFLOW_BASE_URL=http://localhost:9380
 ```
 
+### 7. 🔒 安全配置重要说明
+
+⚠️ **重要**：在生产环境部署前，请务必完成以下安全配置：
+
+#### API密钥安全
+- 将 `.env` 文件中的 `RAGFLOW_API_KEY` 替换为真实的RAGFlow API密钥
+- 确保 `.env` 文件不被提交到Git仓库（已在.gitignore中排除）
+
+#### Flask密钥安全
+- 生成强随机密钥替换 `FLASK_SECRET_KEY`：
+```bash
+# 生成32字符随机密钥
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+#### 生产环境建议
+- 设置 `FLASK_DEBUG=False`
+- 使用HTTPS协议
+- 配置防火墙规则，仅开放必要端口
+- 定期更新API密钥
+
 ## 🚀 快速开始
 
 ### 1. 启动InterVL FastAPI服务
@@ -261,4 +282,4 @@ engineering-ocr-rag-system/
 
 ---
 
-**�� 让工程文档解析变得更加智能！** 
+**让工程文档解析变得更加智能！** 

@@ -68,7 +68,7 @@ except ImportError as e:
 
 # 创建Flask应用
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'engineering-ocr-rag-system-2025'
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'dev-key-please-change-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB
 
 # 启用CORS支持
