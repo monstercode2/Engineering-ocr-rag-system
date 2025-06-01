@@ -249,9 +249,7 @@ engineering-ocr-rag-system/
 
 如果您在使用过程中遇到问题或有任何建议，请通过以下方式联系我们：
 
-- 📧 Email: your-email@example.com
 - 🐛 Issues: [GitHub Issues](https://github.com/your-username/engineering-ocr-rag-system/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/your-username/engineering-ocr-rag-system/discussions)
 
 ## ⭐ Star History
 
@@ -261,4 +259,4 @@ engineering-ocr-rag-system/
 
 ---
 
-**�� 让工程文档解析变得更加智能！** 
+**AI让工程文档解析变得更加智能！** 
