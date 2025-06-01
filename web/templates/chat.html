@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+
+{% block title %}智能问答 - 工程文档智能解析与RAG问答系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- 聊天主界面 -->
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2"></i>
+                    工程智能助手
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="clearChat()">
+                        <i class="fas fa-trash me-1"></i>清空对话
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="exportChat()">
+                        <i class="fas fa-download me-1"></i>导出对话
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0 d-flex flex-column" style="height: 600px;">
+                <!-- 聊天消息区域 -->
+                <div class="chat-container flex-grow-1" id="chatContainer">
+                    <!-- 欢迎消息 -->
+                    <div class="message system">
+                        <i class="fas fa-robot me-2"></i>
+                        欢迎使用工程智能助手！我可以帮您解答工程技术问题。
+                    </div>
+                </div>
+                
+                <!-- 输入区域 -->
+                <div class="p-3 border-top bg-light">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="messageInput" 
+                               placeholder="请输入您的技术问题..." 
+                               onkeypress="handleKeyPress(event)">
+                        <button class="btn btn-primary" type="button" onclick="sendMessage()" id="sendBtn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- 快捷问题 -->
+                    <div class="mt-2">
+                        <small class="text-muted">快捷问题：</small>
+                        <div class="mt-1">
+                            <button class="btn btn-sm btn-outline-secondary me-1 mb-1" onclick="askQuickQuestion('这个设备的工作压力是多少？')">
+                                工作压力
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary me-1 mb-1" onclick="askQuickQuestion('材料的强度等级要求是什么？')">
+                                材料强度
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary me-1 mb-1" onclick="askQuickQuestion('工艺流程的温度控制范围？')">
+                                温度控制
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary me-1 mb-1" onclick="askQuickQuestion('相关的技术标准有哪些？')">
+                                技术标准
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- 侧边栏 -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    系统状态
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>RAG引擎:</span>
+                    <span class="badge bg-success" id="ragStatus">运行中</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>知识库文档:</span>
+                    <span class="badge bg-info" id="docCount">0</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>响应时间:</span>
+                    <span class="badge bg-secondary" id="responseTime">--</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 对话历史 -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    对话统计
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="h5 mb-0" id="messageCount">0</div>
+                        <small class="text-muted">消息数</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h5 mb-0" id="sessionTime">0:00</div>
+                        <small class="text-muted">会话时长</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h5 mb-0" id="avgResponseTime">--</div>
+                        <small class="text-muted">平均响应</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 使用提示 -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    使用提示
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        询问具体的技术参数和规格
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        提问工艺流程和操作步骤
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        查询安全标准和规范要求
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        支持多轮对话和上下文理解
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 全局变量
+    let sessionId = generateSessionId();
+    let messageCount = 0;
+    let sessionStartTime = Date.now();
+    let responseTimes = [];
+    let isProcessing = false;
+    
+    // 生成会话ID
+    function generateSessionId() {
+        return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+    
+    // 处理回车键
+    function handleKeyPress(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    }
+    
+    // 发送消息
+    async function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const message = input.value.trim();
+        
+        if (!message || isProcessing) return;
+        
+        // 清空输入框
+        input.value = '';
+        
+        // 添加用户消息到界面
+        addMessage('user', message);
+        
+        // 显示打字指示器
+        showTypingIndicator();
+        
+        // 设置处理状态
+        isProcessing = true;
+        updateSendButton(true);
+        
+        const startTime = Date.now();
+        
+        try {
+            // 发送API请求
+            const response = await apiRequest('/api/chat/query', {
+                method: 'POST',
+                body: JSON.stringify({
+                    question: message,
+                    session_id: sessionId
+                })
+            });
+            
+            const endTime = Date.now();
+            const responseTime = endTime - startTime;
+            responseTimes.push(responseTime);
+            
+            // 隐藏打字指示器
+            hideTypingIndicator();
+            
+            if (response.success) {
+                // 添加助手回复
+                addMessage('assistant', response.answer, {
+                    confidence: response.confidence,
+                    sources: response.sources,
+                    processing_time: responseTime
+                });
+                
+                // 更新响应时间显示
+                updateResponseTime(responseTime);
+            } else {
+                addMessage('system', '抱歉，处理您的问题时出现错误。请稍后再试。');
+            }
+            
+        } catch (error) {
+            hideTypingIndicator();
+            addMessage('system', `连接错误: ${error.message}`);
+        } finally {
+            isProcessing = false;
+            updateSendButton(false);
+            updateStatistics();
+        }
+    }
+    
+    // 快捷问题
+    function askQuickQuestion(question) {
+        const input = document.getElementById('messageInput');
+        input.value = question;
+        sendMessage();
+    }
+    
+    // 添加消息到聊天界面
+    function addMessage(type, content, metadata = {}) {
+        const container = document.getElementById('chatContainer');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        
+        let messageHTML = '';
+        
+        if (type === 'user') {
+            messageHTML = `
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <strong>您</strong>
+                    <small class="text-muted">${formatTime(new Date())}</small>
+                </div>
+                <div>${escapeHtml(content)}</div>
+            `;
+        } else if (type === 'assistant') {
+            messageHTML = `
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <strong><i class="fas fa-robot me-1"></i>助手</strong>
+                    <small class="text-muted">${formatTime(new Date())}</small>
+                </div>
+                <div class="mb-2">${escapeHtml(content)}</div>
+            `;
+            
+            // 添加元数据信息
+            if (metadata.confidence !== undefined) {
+                messageHTML += `
+                    <div class="mt-2 pt-2 border-top">
+                        <small class="text-muted">
+                            <i class="fas fa-chart-line me-1"></i>置信度: ${(metadata.confidence * 100).toFixed(1)}%
+                            <span class="ms-3">
+                                <i class="fas fa-clock me-1"></i>响应时间: ${metadata.processing_time}ms
+                            </span>
+                        </small>
+                    </div>
+                `;
+            }
+            
+            if (metadata.sources && metadata.sources.length > 0) {
+                messageHTML += `
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-book me-1"></i>参考来源: ${metadata.sources.length}个文档
+                        </small>
+                    </div>
+                `;
+            }
+        } else if (type === 'system') {
+            messageHTML = `
+                <div class="text-center">
+                    <i class="fas fa-info-circle me-1"></i>
+                    ${escapeHtml(content)}
+                </div>
+            `;
+        }
+        
+        messageDiv.innerHTML = messageHTML;
+        container.appendChild(messageDiv);
+        
+        // 滚动到底部
+        container.scrollTop = container.scrollHeight;
+        
+        // 更新消息计数
+        messageCount++;
+    }
+    
+    // 显示打字指示器
+    function showTypingIndicator() {
+        const container = document.getElementById('chatContainer');
+        const typingDiv = document.createElement('div');
+        typingDiv.id = 'typingIndicator';
+        typingDiv.className = 'typing-indicator';
+        typingDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <small class="text-muted me-2">助手正在思考</small>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        `;
+        container.appendChild(typingDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+    
+    // 隐藏打字指示器
+    function hideTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+    
+    // 更新发送按钮状态
+    function updateSendButton(processing) {
+        const btn = document.getElementById('sendBtn');
+        if (processing) {
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading"></div>';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        }
+    }
+    
+    // 更新响应时间显示
+    function updateResponseTime(time) {
+        document.getElementById('responseTime').textContent = time + 'ms';
+        
+        const avgTime = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
+        document.getElementById('avgResponseTime').textContent = Math.round(avgTime) + 'ms';
+    }
+    
+    // 更新统计信息
+    function updateStatistics() {
+        document.getElementById('messageCount').textContent = messageCount;
+        
+        const sessionDuration = Date.now() - sessionStartTime;
+        const minutes = Math.floor(sessionDuration / 60000);
+        const seconds = Math.floor((sessionDuration % 60000) / 1000);
+        document.getElementById('sessionTime').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    // 清空对话
+    function clearChat() {
+        if (confirm('确定要清空所有对话记录吗？')) {
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = `
+                <div class="message system">
+                    <i class="fas fa-robot me-2"></i>
+                    欢迎使用工程智能助手！我可以帮您解答工程技术问题。
+                </div>
+            `;
+            
+            // 重置统计
+            messageCount = 0;
+            sessionStartTime = Date.now();
+            responseTimes = [];
+            sessionId = generateSessionId();
+            
+            updateStatistics();
+            document.getElementById('responseTime').textContent = '--';
+            document.getElementById('avgResponseTime').textContent = '--';
+            
+            showNotification('对话已清空', 'info');
+        }
+    }
+    
+    // 导出对话
+    function exportChat() {
+        const messages = document.querySelectorAll('.message');
+        let content = '# 工程智能助手对话记录\n\n';
+        content += `**会话ID**: ${sessionId}\n`;
+        content += `**导出时间**: ${formatTime(new Date())}\n\n`;
+        content += '---\n\n';
+        
+        messages.forEach((msg, index) => {
+            const type = msg.classList.contains('user') ? '👤 用户' : 
+                        msg.classList.contains('assistant') ? '🤖 助手' : '💡 系统';
+            const text = msg.textContent.trim();
+            content += `## ${index + 1}. ${type}\n\n${text}\n\n---\n\n`;
+        });
+        
+        const blob = new Blob([content], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chat_${sessionId}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showNotification('对话记录已导出', 'success');
+    }
+    
+    // 更新系统状态
+    async function updateSystemStatus() {
+        try {
+            const status = await apiRequest('/api/system/status');
+            
+            // 更新RAG状态
+            const ragStatus = document.getElementById('ragStatus');
+            if (status.ragflow_adapter) {
+                ragStatus.textContent = '运行中';
+                ragStatus.className = 'badge bg-success';
+            } else {
+                ragStatus.textContent = '未初始化';
+                ragStatus.className = 'badge bg-danger';
+            }
+            
+            // 更新知识库文档数
+            try {
+                const stats = await apiRequest('/api/knowledge/stats');
+                if (stats.success && stats.stats) {
+                    document.getElementById('docCount').textContent = stats.stats.total_documents || 0;
+                }
+            } catch (error) {
+                console.log('获取知识库统计失败:', error);
+            }
+            
+        } catch (error) {
+            console.error('更新系统状态失败:', error);
+        }
+    }
+    
+    // 工具函数
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function formatTime(date) {
+        return date.toLocaleTimeString('zh-CN', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit' 
+        });
+    }
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 更新系统状态
+        updateSystemStatus();
+        
+        // 设置定时器更新统计信息
+        setInterval(updateStatistics, 1000);
+        
+        // 定期更新系统状态
+        setInterval(updateSystemStatus, 30000);
+        
+        // 自动聚焦输入框
+        document.getElementById('messageInput').focus();
+    });
+    
+    // WebSocket事件处理
+    if (socket) {
+        socket.on('chat_response', function(data) {
+            console.log('收到WebSocket响应:', data);
+        });
+    }
+</script>
+{% endblock %} 

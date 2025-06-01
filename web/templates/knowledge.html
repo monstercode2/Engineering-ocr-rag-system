@@ -1,0 +1,496 @@
+{% extends "base.html" %}
+
+{% block title %}知识库管理 - 工程文档智能解析与RAG问答系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- 页面标题 -->
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="text-primary fw-bold mb-1">📚 知识库管理</h2>
+                    <p class="text-muted mb-0">管理工程文档知识库，查看文档和统计信息</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary me-2" onclick="refreshKnowledgeBase()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                    <button class="btn btn-primary" onclick="exportKnowledgeBase()">
+                        <i class="fas fa-download"></i> 导出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 统计卡片 -->
+        <div class="col-md-3 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-primary mb-3">
+                        <i class="fas fa-file-alt" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h3 class="fw-bold text-primary mb-1" id="totalDocuments">-</h3>
+                    <p class="text-muted mb-0">总文档数</p>
+                    <small class="text-success" id="documentsGrowth">-</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-success mb-3">
+                        <i class="fas fa-puzzle-piece" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h3 class="fw-bold text-success mb-1" id="totalChunks">-</h3>
+                    <p class="text-muted mb-0">知识片段</p>
+                    <small class="text-success" id="chunksGrowth">-</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-3">
+                        <i class="fas fa-database" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h3 class="fw-bold text-warning mb-1" id="storageSize">-</h3>
+                    <p class="text-muted mb-0">存储大小</p>
+                    <small class="text-info" id="storageUsage">-</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-info mb-3">
+                        <i class="fas fa-clock" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h3 class="fw-bold text-info mb-1" id="lastUpdated">-</h3>
+                    <p class="text-muted mb-0">最后更新</p>
+                    <small class="text-muted" id="updateFrequency">-</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 文档列表 -->
+        <div class="col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0">📖 文档列表</h5>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" id="documentFilter" onchange="filterDocuments()">
+                                <option value="">所有类型</option>
+                                <option value="technical_manual">技术手册</option>
+                                <option value="engineering_drawing">工程图纸</option>
+                                <option value="process_diagram">工艺流程图</option>
+                                <option value="specification_sheet">技术规格表</option>
+                            </select>
+                            <div class="input-group input-group-sm" style="width: 200px;">
+                                <input type="text" class="form-control" placeholder="搜索文档..." id="documentSearch" onkeyup="searchDocuments()">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="px-4 py-3">文档名称</th>
+                                    <th class="px-4 py-3">类型</th>
+                                    <th class="px-4 py-3">领域</th>
+                                    <th class="px-4 py-3">添加时间</th>
+                                    <th class="px-4 py-3">状态</th>
+                                    <th class="px-4 py-3">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="documentsTableBody">
+                                <!-- 文档列表将动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="noDocuments" class="text-center py-5" style="display: none;">
+                        <div class="text-muted">
+                            <i class="fas fa-folder-open" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="mt-3 mb-0">暂无文档</p>
+                            <small>请先上传一些工程文档</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 知识库信息 -->
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="fw-bold mb-0">📊 领域分布</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="domainChart" style="max-height: 200px;"></canvas>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="fw-bold mb-0">🔧 知识库操作</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="rebuildIndex()">
+                            <i class="fas fa-cog"></i> 重建索引
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="optimizeKnowledgeBase()">
+                            <i class="fas fa-compress-alt"></i> 优化存储
+                        </button>
+                        <button class="btn btn-outline-info" onclick="validateKnowledgeBase()">
+                            <i class="fas fa-check-circle"></i> 验证完整性
+                        </button>
+                        <hr>
+                        <button class="btn btn-outline-danger" onclick="clearKnowledgeBase()">
+                            <i class="fas fa-trash"></i> 清空知识库
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 文档详情模态框 -->
+<div class="modal fade" id="documentDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">📄 文档详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="documentDetailContent">
+                    <!-- 文档详情内容 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="downloadDocument()">下载文档</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let domainChart = null;
+let currentDocuments = [];
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🧪 知识库页面开始加载...');
+    loadKnowledgeBaseStats();
+    loadDocuments();
+    initWebSocket();
+});
+
+// 加载知识库统计
+async function loadKnowledgeBaseStats() {
+    console.log('📊 开始加载知识库统计...');
+    try {
+        const response = await fetch('/api/knowledge/stats');
+        const data = await response.json();
+        console.log('📊 统计API响应:', data);
+        
+        if (data.success) {
+            updateStatsDisplay(data.stats);
+            console.log('✅ 统计数据更新成功');
+        } else {
+            console.warn('⚠️ 统计API返回错误:', data.message);
+            showNotification('获取知识库统计失败: ' + data.message, 'warning');
+        }
+    } catch (error) {
+        console.error('❌ 获取知识库统计失败:', error);
+        showNotification('获取知识库统计失败', 'danger');
+    }
+}
+
+// 更新统计显示
+function updateStatsDisplay(stats) {
+    console.log('📈 更新统计显示:', stats);
+    document.getElementById('totalDocuments').textContent = stats.total_documents || 0;
+    document.getElementById('totalChunks').textContent = stats.total_chunks || 0;
+    document.getElementById('storageSize').textContent = formatFileSize(stats.storage_size || 0);
+    
+    const lastUpdated = stats.last_updated ? 
+        new Date(stats.last_updated).toLocaleDateString('zh-CN') : '未知';
+    document.getElementById('lastUpdated').textContent = lastUpdated;
+}
+
+// 加载文档列表
+async function loadDocuments() {
+    console.log('📚 开始加载文档列表...');
+    try {
+        const response = await fetch('/api/knowledge/documents');
+        const data = await response.json();
+        console.log('📚 文档API响应:', data);
+        console.log('📚 文档总数:', data.total);
+        console.log('📚 文档数组长度:', data.documents ? data.documents.length : 'undefined');
+        
+        if (data.success) {
+            currentDocuments = data.documents;
+            console.log('📚 保存到currentDocuments:', currentDocuments.length, '个文档');
+            displayDocuments(currentDocuments);
+            updateDomainChart(currentDocuments);
+            console.log('✅ 文档列表处理完成');
+        } else {
+            console.warn('⚠️ 文档API返回错误:', data.message);
+            showNotification('获取文档列表失败: ' + data.message, 'warning');
+            showNoDocuments();
+        }
+    } catch (error) {
+        console.error('❌ 获取文档列表失败:', error);
+        showNotification('获取文档列表失败', 'danger');
+        showNoDocuments();
+    }
+}
+
+// 显示文档列表
+function displayDocuments(documents) {
+    console.log('🖼️ 开始显示文档列表，文档数量:', documents ? documents.length : 'undefined');
+    
+    const tbody = document.getElementById('documentsTableBody');
+    const noDocsDiv = document.getElementById('noDocuments');
+    
+    console.log('📋 表格元素:', tbody ? '找到' : '未找到');
+    console.log('📋 无文档提示元素:', noDocsDiv ? '找到' : '未找到');
+    
+    if (!documents || documents.length === 0) {
+        console.log('📋 文档列表为空，显示无文档状态');
+        showNoDocuments();
+        return;
+    }
+    
+    console.log('📋 隐藏无文档提示');
+    noDocsDiv.style.display = 'none';
+    
+    console.log('📋 开始生成表格HTML，处理', documents.length, '个文档');
+    
+    try {
+        const html = documents.map((doc, index) => {
+            console.log(`📋 处理文档 ${index + 1}:`, doc.name, doc.id);
+            return `
+                <tr>
+                    <td class="px-4 py-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-file-alt text-muted me-2"></i>
+                            <div>
+                                <div class="fw-medium">${doc.name || '未知文档'}</div>
+                                <small class="text-muted">${formatFileSize(doc.size || 0)}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="badge bg-primary bg-opacity-10 text-primary">
+                            ${getDocumentTypeLabel(doc.type)}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="badge bg-success bg-opacity-10 text-success">
+                            ${getDomainLabel(doc.domain)}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <small class="text-muted">
+                            ${doc.created_at ? new Date(doc.created_at).toLocaleDateString('zh-CN') : '未知'}
+                        </small>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="badge bg-success">已处理</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="viewDocument('${doc.id}')" title="查看详情">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteDocument('${doc.id}')" title="删除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        console.log('📋 生成的HTML长度:', html.length);
+        tbody.innerHTML = html;
+        console.log('✅ 表格HTML已设置到tbody');
+        
+        // 验证表格是否有内容
+        const rows = tbody.querySelectorAll('tr');
+        console.log('📋 表格中的行数:', rows.length);
+        
+    } catch (error) {
+        console.error('❌ 生成表格HTML时出错:', error);
+        showNotification('显示文档列表时出错: ' + error.message, 'danger');
+    }
+}
+
+// 显示无文档状态
+function showNoDocuments() {
+    document.getElementById('documentsTableBody').innerHTML = '';
+    document.getElementById('noDocuments').style.display = 'block';
+}
+
+// 更新领域分布图表
+function updateDomainChart(documents) {
+    const domainCounts = {};
+    documents.forEach(doc => {
+        const domain = doc.domain || 'general';
+        domainCounts[domain] = (domainCounts[domain] || 0) + 1;
+    });
+    
+    const ctx = document.getElementById('domainChart').getContext('2d');
+    
+    if (domainChart) {
+        domainChart.destroy();
+    }
+    
+    domainChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(domainCounts).map(domain => getDomainLabel(domain)),
+            datasets: [{
+                data: Object.values(domainCounts),
+                backgroundColor: [
+                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+                    '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// 工具函数
+function getDocumentTypeLabel(type) {
+    const types = {
+        'technical_manual': '技术手册',
+        'engineering_drawing': '工程图纸',
+        'process_diagram': '工艺流程图',
+        'specification_sheet': '技术规格表',
+        'general': '通用文档'
+    };
+    return types[type] || type;
+}
+
+function getDomainLabel(domain) {
+    const domains = {
+        'mechanical': '机械工程',
+        'electrical': '电气工程',
+        'chemical': '化学工程',
+        'civil': '土木工程',
+        'aerospace': '航空航天',
+        'general': '通用领域'
+    };
+    return domains[domain] || domain;
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// 操作函数
+async function refreshKnowledgeBase() {
+    showNotification('正在刷新知识库...', 'info');
+    await loadKnowledgeBaseStats();
+    await loadDocuments();
+    showNotification('知识库已刷新', 'success');
+}
+
+function exportKnowledgeBase() {
+    showNotification('导出功能开发中...', 'info');
+}
+
+function rebuildIndex() {
+    if (confirm('确定要重建索引吗？这可能需要一些时间。')) {
+        showNotification('索引重建功能开发中...', 'info');
+    }
+}
+
+function optimizeKnowledgeBase() {
+    if (confirm('确定要优化知识库存储吗？')) {
+        showNotification('存储优化功能开发中...', 'info');
+    }
+}
+
+function validateKnowledgeBase() {
+    showNotification('验证功能开发中...', 'info');
+}
+
+function clearKnowledgeBase() {
+    if (confirm('确定要清空整个知识库吗？此操作不可恢复！')) {
+        showNotification('清空功能开发中...', 'warning');
+    }
+}
+
+function filterDocuments() {
+    const filter = document.getElementById('documentFilter').value;
+    const filtered = filter ? 
+        currentDocuments.filter(doc => doc.type === filter) : 
+        currentDocuments;
+    displayDocuments(filtered);
+}
+
+function searchDocuments() {
+    const query = document.getElementById('documentSearch').value.toLowerCase();
+    const filtered = query ? 
+        currentDocuments.filter(doc => 
+            (doc.name || '').toLowerCase().includes(query)
+        ) : currentDocuments;
+    displayDocuments(filtered);
+}
+
+function viewDocument(docId) {
+    showNotification('查看文档功能开发中...', 'info');
+}
+
+function deleteDocument(docId) {
+    if (confirm('确定要删除这个文档吗？')) {
+        showNotification('删除文档功能开发中...', 'warning');
+    }
+}
+
+function downloadDocument() {
+    showNotification('下载功能开发中...', 'info');
+}
+
+// WebSocket连接
+function initWebSocket() {
+    // WebSocket功能可以后续添加
+}
+</script>
+{% endblock %} 

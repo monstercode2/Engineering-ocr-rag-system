@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 工程文档智能解析与RAG问答系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- 主标题 -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold mb-3">
+                <i class="fas fa-cogs text-primary me-3"></i>
+                工程文档智能解析与RAG问答系统
+            </h1>
+            <p class="lead text-muted">
+                基于 <strong>InterVL</strong> 多模态OCR和 <strong>RAGFlow</strong> 企业级RAG的专业工程助手
+            </p>
+        </div>
+
+        <!-- 系统状态卡片 -->
+        <div class="row mb-5">
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="display-6 mb-3" id="ocrStatus">
+                            <i class="fas fa-eye text-primary"></i>
+                        </div>
+                        <h6 class="card-title">OCR识别</h6>
+                        <p class="card-text small text-muted" id="ocrStatusText">检查中...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="display-6 mb-3" id="ragflowStatus">
+                            <i class="fas fa-database text-primary"></i>
+                        </div>
+                        <h6 class="card-title">RAG问答</h6>
+                        <p class="card-text small text-muted" id="ragflowStatusText">检查中...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="display-6 mb-3" id="documentsCount">
+                            <i class="fas fa-file-alt text-primary"></i>
+                        </div>
+                        <h6 class="card-title">文档总数</h6>
+                        <p class="card-text small text-muted" id="documentsCountText">加载中...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="display-6 mb-3" id="systemHealth">
+                            <i class="fas fa-heartbeat text-primary"></i>
+                        </div>
+                        <h6 class="card-title">系统健康</h6>
+                        <p class="card-text small text-muted" id="systemHealthText">检查中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能介绍 -->
+        <div class="row mb-5">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-upload me-2"></i>
+                            智能文档上传
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            支持多种工程文档格式，包括PDF技术手册、CAD图纸、工艺流程图等。
+                            智能识别文档类型和工程领域。
+                        </p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>PDF、Word文档</li>
+                            <li><i class="fas fa-check text-success me-2"></i>图片格式（JPG、PNG、TIFF）</li>
+                            <li><i class="fas fa-check text-success me-2"></i>CAD图纸（DWG、DXF）</li>
+                        </ul>
+                        <a href="/upload" class="btn btn-primary">
+                            <i class="fas fa-arrow-right me-1"></i>开始上传
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-robot me-2"></i>
+                            智能问答系统
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            基于RAGFlow的企业级问答引擎，准确理解和回答工程技术问题。
+                            支持多轮对话和上下文理解。
+                        </p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>技术参数查询</li>
+                            <li><i class="fas fa-check text-success me-2"></i>工艺流程解答</li>
+                            <li><i class="fas fa-check text-success me-2"></i>安全标准引用</li>
+                        </ul>
+                        <a href="/chat" class="btn btn-primary">
+                            <i class="fas fa-arrow-right me-1"></i>开始对话
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 技术架构 -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-sitemap me-2"></i>
+                    技术架构
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>InterVL多模态OCR</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-cog text-primary me-2"></i>复杂工程文档识别</li>
+                            <li><i class="fas fa-cog text-primary me-2"></i>表格、图表、标注提取</li>
+                            <li><i class="fas fa-cog text-primary me-2"></i>结构化内容输出</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>RAGFlow企业级RAG</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-database text-secondary me-2"></i>智能文档解析分块</li>
+                            <li><i class="fas fa-database text-secondary me-2"></i>语义检索和问答</li>
+                            <li><i class="fas fa-database text-secondary me-2"></i>可视化管理界面</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 流程图 -->
+                <div class="mt-4 p-4 bg-light rounded">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="text-center mb-2">
+                            <i class="fas fa-file-upload fa-2x text-primary"></i>
+                            <div class="small mt-1">文档上传</div>
+                        </div>
+                        <div class="text-center mb-2">
+                            <i class="fas fa-arrow-right text-muted"></i>
+                        </div>
+                        <div class="text-center mb-2">
+                            <i class="fas fa-eye fa-2x text-info"></i>
+                            <div class="small mt-1">OCR识别</div>
+                        </div>
+                        <div class="text-center mb-2">
+                            <i class="fas fa-arrow-right text-muted"></i>
+                        </div>
+                        <div class="text-center mb-2">
+                            <i class="fas fa-cogs fa-2x text-warning"></i>
+                            <div class="small mt-1">结构化处理</div>
+                        </div>
+                        <div class="text-center mb-2">
+                            <i class="fas fa-arrow-right text-muted"></i>
+                        </div>
+                        <div class="text-center mb-2">
+                            <i class="fas fa-database fa-2x text-success"></i>
+                            <div class="small mt-1">知识库存储</div>
+                        </div>
+                        <div class="text-center mb-2">
+                            <i class="fas fa-arrow-right text-muted"></i>
+                        </div>
+                        <div class="text-center mb-2">
+                            <i class="fas fa-comments fa-2x text-danger"></i>
+                            <div class="small mt-1">智能问答</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快速开始 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-rocket me-2"></i>
+                    快速开始
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-start">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                <strong>1</strong>
+                            </div>
+                            <div>
+                                <h6>上传工程文档</h6>
+                                <p class="small text-muted mb-0">
+                                    选择您的技术文档、工程图纸或工艺说明书进行上传
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-start">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                <strong>2</strong>
+                            </div>
+                            <div>
+                                <h6>等待智能处理</h6>
+                                <p class="small text-muted mb-0">
+                                    系统自动进行OCR识别和结构化处理，添加到知识库
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-start">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                <strong>3</strong>
+                            </div>
+                            <div>
+                                <h6>开始智能问答</h6>
+                                <p class="small text-muted mb-0">
+                                    向AI助手提问工程技术问题，获得专业准确的答案
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button class="btn btn-success btn-lg me-3" onclick="initializeSystem()">
+                        <i class="fas fa-play me-2"></i>
+                        初始化系统
+                    </button>
+                    <a href="/upload" class="btn btn-primary btn-lg">
+                        <i class="fas fa-upload me-2"></i>
+                        立即开始
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 系统初始化
+    async function initializeSystem() {
+        const btn = document.querySelector('button[onclick="initializeSystem()"]');
+        const originalText = btn.innerHTML;
+        
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading me-2"></div>初始化中...';
+            
+            const response = await apiRequest('/api/system/init', {
+                method: 'POST'
+            });
+            
+            if (response.success) {
+                showNotification('系统初始化成功！', 'success');
+                updateSystemStatus();
+            } else {
+                showNotification('系统初始化失败', 'danger');
+            }
+        } catch (error) {
+            showNotification(`初始化失败: ${error.message}`, 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
+    // 更新系统状态
+    async function updateSystemStatus() {
+        try {
+            const status = await apiRequest('/api/system/status');
+            
+            // 更新OCR状态
+            const ocrStatus = document.getElementById('ocrStatus');
+            const ocrStatusText = document.getElementById('ocrStatusText');
+            if (status.ocr_manager) {
+                ocrStatus.innerHTML = '<i class="fas fa-eye text-success"></i>';
+                ocrStatusText.textContent = '运行正常';
+                ocrStatusText.className = 'card-text small text-success';
+            } else {
+                ocrStatus.innerHTML = '<i class="fas fa-eye text-danger"></i>';
+                ocrStatusText.textContent = '未初始化';
+                ocrStatusText.className = 'card-text small text-danger';
+            }
+            
+            // 更新RAGFlow状态
+            const ragflowStatus = document.getElementById('ragflowStatus');
+            const ragflowStatusText = document.getElementById('ragflowStatusText');
+            if (status.ragflow_adapter) {
+                ragflowStatus.innerHTML = '<i class="fas fa-database text-success"></i>';
+                ragflowStatusText.textContent = '运行正常';
+                ragflowStatusText.className = 'card-text small text-success';
+            } else {
+                ragflowStatus.innerHTML = '<i class="fas fa-database text-danger"></i>';
+                ragflowStatusText.textContent = '未初始化';
+                ragflowStatusText.className = 'card-text small text-danger';
+            }
+            
+            // 更新系统健康状态
+            const systemHealth = document.getElementById('systemHealth');
+            const systemHealthText = document.getElementById('systemHealthText');
+            const isHealthy = status.ocr_manager && status.ragflow_adapter;
+            
+            if (isHealthy) {
+                systemHealth.innerHTML = '<i class="fas fa-heartbeat text-success pulse"></i>';
+                systemHealthText.textContent = '系统健康';
+                systemHealthText.className = 'card-text small text-success';
+            } else {
+                systemHealth.innerHTML = '<i class="fas fa-heartbeat text-warning"></i>';
+                systemHealthText.textContent = '部分功能异常';
+                systemHealthText.className = 'card-text small text-warning';
+            }
+            
+        } catch (error) {
+            console.error('更新系统状态失败:', error);
+        }
+    }
+
+    // 更新文档统计
+    async function updateDocumentStats() {
+        try {
+            const stats = await apiRequest('/api/knowledge/stats');
+            const documentsCount = document.getElementById('documentsCount');
+            const documentsCountText = document.getElementById('documentsCountText');
+            
+            if (stats.success && stats.stats) {
+                const totalDocs = stats.stats.total_documents || 0;
+                documentsCount.innerHTML = `<i class="fas fa-file-alt text-primary"></i><div class="h4 mt-2">${totalDocs}</div>`;
+                documentsCountText.textContent = '个文档';
+                documentsCountText.className = 'card-text small text-muted';
+            } else {
+                documentsCount.innerHTML = '<i class="fas fa-file-alt text-muted"></i>';
+                documentsCountText.textContent = '无法获取';
+                documentsCountText.className = 'card-text small text-muted';
+            }
+        } catch (error) {
+            const documentsCount = document.getElementById('documentsCount');
+            const documentsCountText = document.getElementById('documentsCountText');
+            documentsCount.innerHTML = '<i class="fas fa-file-alt text-muted"></i>';
+            documentsCountText.textContent = '数据加载失败';
+            documentsCountText.className = 'card-text small text-danger';
+        }
+    }
+
+    // 页面加载完成后的初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 更新系统状态
+        updateSystemStatus();
+        
+        // 更新文档统计
+        updateDocumentStats();
+        
+        // 定期更新状态（每30秒）
+        setInterval(() => {
+            updateSystemStatus();
+            updateDocumentStats();
+        }, 30000);
+    });
+</script>
+{% endblock %} 

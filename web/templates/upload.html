@@ -1,0 +1,1391 @@
+{% extends "base.html" %}
+
+{% block title %}文档上传 - 工程文档智能解析与RAG问答系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- 文件上传区域 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>
+                    工程文档上传
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- 拖拽上传区域 -->
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <div class="text-center">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                        <h5>将文件拖拽到这里或点击选择</h5>
+                        <p class="text-muted mb-3">
+                            支持 PDF、Word文档、图片格式（JPG、PNG、TIFF）等工程文档
+                        </p>
+                        <button class="btn btn-primary">
+                            <i class="fas fa-folder-open me-2"></i>选择文件
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 隐藏的文件输入 -->
+                <input type="file" id="fileInput" style="display: none" multiple 
+                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.bmp,.tiff,.dwg,.dxf">
+                
+                <!-- 上传进度 -->
+                <div id="uploadProgress" class="mt-3" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>正在上传...</span>
+                        <span id="progressText">0%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文件列表 -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt me-2"></i>
+                    上传的文件
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="refreshFileList()">
+                        <i class="fas fa-sync-alt me-1"></i>刷新
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearAllFiles()">
+                        <i class="fas fa-trash me-1"></i>清空所有
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="fileList">
+                    <!-- 文件列表将在这里动态生成 -->
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-folder-open fa-3x mb-3"></i>
+                        <p>暂无上传的文件</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- 上传统计 -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    上传统计
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="h5 mb-0" id="totalFiles">0</div>
+                        <small class="text-muted">总文件数</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h5 mb-0" id="totalSize">0MB</div>
+                        <small class="text-muted">总大小</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h5 mb-0" id="processedFiles">0</div>
+                        <small class="text-muted">已处理</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文档类型分布 -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    文档类型
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="documentTypes">
+                    <!-- 文档类型统计将在这里显示 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 工程领域分布 -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>
+                    工程领域
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="engineeringDomains">
+                    <!-- 工程领域统计将在这里显示 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 上传指南 -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    上传指南
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <h6>支持的文件格式</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-file-pdf text-danger me-2"></i>PDF 文档</li>
+                        <li><i class="fas fa-file-word text-primary me-2"></i>Word 文档</li>
+                        <li><i class="fas fa-file-image text-success me-2"></i>图片格式</li>
+                        <li><i class="fas fa-file-alt text-warning me-2"></i>CAD 图纸</li>
+                    </ul>
+
+                    <h6 class="mt-3">文件要求</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>单文件最大 500MB</li>
+                        <li><i class="fas fa-check text-success me-2"></i>支持批量上传</li>
+                        <li><i class="fas fa-check text-success me-2"></i>自动识别文档类型</li>
+                    </ul>
+
+                    <h6 class="mt-3">处理流程</h6>
+                    <ol class="small">
+                        <li>文件上传完成</li>
+                        <li>OCR识别和解析</li>
+                        <li>结构化数据提取</li>
+                        <li>添加到知识库</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 文件上传相关变量
+    let uploadedFiles = [];
+    let currentUploads = 0;
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeUpload();
+        loadFileList();
+        updateProcessedCount(); // 更新已处理文件计数
+    });
+    
+    // 初始化上传功能
+    function initializeUpload() {
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        // 拖拽事件处理
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+        
+        // 文件选择事件
+        fileInput.addEventListener('change', function(e) {
+            handleFiles(e.target.files);
+        });
+    }
+    
+    // 处理选择的文件
+    async function handleFiles(files) {
+        if (files.length === 0) return;
+        
+        const fileArray = Array.from(files);
+        const maxFiles = 10; // 最大同时上传文件数
+        
+        if (fileArray.length > maxFiles) {
+            showNotification(`一次最多只能上传 ${maxFiles} 个文件`, 'warning');
+            return;
+        }
+        
+        // 验证文件
+        const validFiles = [];
+        for (let file of fileArray) {
+            if (validateFile(file)) {
+                validFiles.push(file);
+            }
+        }
+        
+        if (validFiles.length === 0) {
+            showNotification('没有有效的文件可以上传', 'warning');
+            return;
+        }
+        
+        // 批量上传文件
+        await uploadFiles(validFiles);
+    }
+    
+    // 验证文件
+    function validateFile(file) {
+        const maxSize = 500 * 1024 * 1024; // 500MB
+        const allowedTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'image/jpeg',
+            'image/png',
+            'image/bmp',
+            'image/tiff'
+        ];
+        
+        if (file.size > maxSize) {
+            showNotification(`文件 "${file.name}" 超过 500MB 限制`, 'danger');
+            return false;
+        }
+        
+        if (!allowedTypes.includes(file.type) && !file.name.toLowerCase().match(/\.(dwg|dxf)$/)) {
+            showNotification(`文件 "${file.name}" 格式不支持`, 'danger');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // 上传文件
+    async function uploadFiles(files) {
+        const totalFiles = files.length;
+        let completedFiles = 0;
+        let failedFiles = 0;
+        
+        // 显示总体进度
+        showUploadProgress();
+        
+        for (let file of files) {
+            try {
+                await uploadSingleFile(file);
+                completedFiles++;
+                showNotification(`文件 "${file.name}" 上传成功`, 'success');
+            } catch (error) {
+                failedFiles++;
+                showNotification(`文件 "${file.name}" 上传失败: ${error.message}`, 'danger');
+            }
+            
+            // 更新进度
+            const progress = Math.round((completedFiles + failedFiles) / totalFiles * 100);
+            updateUploadProgress(progress);
+        }
+        
+        // 隐藏进度条
+        setTimeout(() => {
+            hideUploadProgress();
+        }, 1000);
+        
+        // 刷新文件列表
+        loadFileList();
+        
+        // 显示完成消息
+        if (failedFiles === 0) {
+            showNotification(`成功上传 ${completedFiles} 个文件`, 'success');
+        } else {
+            showNotification(`上传完成：${completedFiles} 成功，${failedFiles} 失败`, 'warning');
+        }
+    }
+    
+    // 上传单个文件
+    async function uploadSingleFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || '上传失败');
+        }
+        
+        return await response.json();
+    }
+    
+    // 显示上传进度
+    function showUploadProgress() {
+        document.getElementById('uploadProgress').style.display = 'block';
+        updateUploadProgress(0);
+    }
+    
+    // 更新上传进度
+    function updateUploadProgress(percent) {
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        
+        progressBar.style.width = percent + '%';
+        progressText.textContent = percent + '%';
+    }
+    
+    // 隐藏上传进度
+    function hideUploadProgress() {
+        document.getElementById('uploadProgress').style.display = 'none';
+    }
+    
+    // 加载文件列表
+    async function loadFileList() {
+        try {
+            const response = await apiRequest('/api/files');
+            displayFileList(response.files);
+            updateStatistics(response.files);
+        } catch (error) {
+            console.error('加载文件列表失败:', error);
+            showNotification('加载文件列表失败', 'danger');
+        }
+    }
+    
+    // 显示文件列表
+    function displayFileList(files) {
+        const container = document.getElementById('fileList');
+        
+        if (files.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-folder-open fa-3x mb-3"></i>
+                    <p>暂无上传的文件</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        files.forEach(file => {
+            html += createFileItem(file);
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    // 创建文件项HTML
+    function createFileItem(file) {
+        const typeIcon = getFileTypeIcon(file.filename);
+        const domainBadge = getDomainBadge(file.engineering_domain);
+        const typeBadge = getTypeBadge(file.document_type);
+        
+        // 获取文件处理状态
+        const processingStatus = getProcessingStatus(file.filename);
+        const statusBadge = getStatusBadge(processingStatus.status);
+        const progressBar = getProgressBar(file.filename, processingStatus);
+        
+        return `
+            <div class="border rounded p-3 mb-3" id="file-${escapeHtml(file.filename)}">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <i class="${typeIcon} fa-2x"></i>
+                    </div>
+                    <div class="col">
+                        <h6 class="mb-1">${escapeHtml(file.filename)}</h6>
+                        <div class="mb-2">
+                            ${typeBadge}
+                            ${domainBadge}
+                            ${statusBadge}
+                        </div>
+                        ${progressBar}
+                        <small class="text-muted">
+                            ${file.size_mb} MB • ${file.modified_time_str}
+                        </small>
+                    </div>
+                    <div class="col-auto">
+                        <div class="btn-group" role="group">
+                            ${getActionButtons(file.filename, processingStatus.status)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 获取文件类型图标
+    function getFileTypeIcon(filename) {
+        const ext = filename.toLowerCase().split('.').pop();
+        
+        const iconMap = {
+            'pdf': 'fas fa-file-pdf text-danger',
+            'doc': 'fas fa-file-word text-primary',
+            'docx': 'fas fa-file-word text-primary',
+            'jpg': 'fas fa-file-image text-success',
+            'jpeg': 'fas fa-file-image text-success',
+            'png': 'fas fa-file-image text-success',
+            'bmp': 'fas fa-file-image text-success',
+            'tiff': 'fas fa-file-image text-success',
+            'dwg': 'fas fa-file-alt text-warning',
+            'dxf': 'fas fa-file-alt text-warning'
+        };
+        
+        return iconMap[ext] || 'fas fa-file text-secondary';
+    }
+    
+    // 获取领域徽章
+    function getDomainBadge(domain) {
+        const badgeMap = {
+            'mechanical': '<span class="badge bg-primary">机械工程</span>',
+            'electrical': '<span class="badge bg-warning">电气工程</span>',
+            'chemical': '<span class="badge bg-success">化工工程</span>',
+            'civil': '<span class="badge bg-info">土木工程</span>',
+            'aerospace': '<span class="badge bg-secondary">航空航天</span>',
+            'general': '<span class="badge bg-light text-dark">通用</span>'
+        };
+        
+        return badgeMap[domain] || badgeMap['general'];
+    }
+    
+    // 获取类型徽章
+    function getTypeBadge(type) {
+        const badgeMap = {
+            'technical_manual': '<span class="badge bg-outline-primary">技术手册</span>',
+            'engineering_drawing': '<span class="badge bg-outline-success">工程图纸</span>',
+            'process_diagram': '<span class="badge bg-outline-warning">工艺流程图</span>',
+            'general': '<span class="badge bg-outline-secondary">通用文档</span>'
+        };
+        
+        return badgeMap[type] || badgeMap['general'];
+    }
+    
+    // 获取文件处理状态
+    function getProcessingStatus(filename) {
+        // 从localStorage或内存中获取文件处理状态
+        const statusKey = `file_status_${filename}`;
+        const saved = localStorage.getItem(statusKey);
+        
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                // 如果解析失败，返回默认状态
+            }
+        }
+        
+        return {
+            status: 'uploaded',  // uploaded, processing, completed, failed
+            progress: 0,
+            message: '已上传',
+            timestamp: Date.now()
+        };
+    }
+    
+    // 设置文件处理状态
+    function setProcessingStatus(filename, status, progress = 0, message = '') {
+        const statusData = {
+            status: status,
+            progress: progress,
+            message: message,
+            timestamp: Date.now()
+        };
+        
+        const statusKey = `file_status_${filename}`;
+        localStorage.setItem(statusKey, JSON.stringify(statusData));
+        
+        // 更新UI显示
+        updateFileStatus(filename, statusData);
+    }
+    
+    // 获取状态徽章
+    function getStatusBadge(status) {
+        const statusMap = {
+            'uploaded': '<span class="badge bg-secondary">已上传</span>',
+            'processing': '<span class="badge bg-warning">处理中</span>',
+            'completed': '<span class="badge bg-success">已完成</span>',
+            'failed': '<span class="badge bg-danger">处理失败</span>'
+        };
+        
+        return statusMap[status] || statusMap['uploaded'];
+    }
+    
+    // 获取进度条
+    function getProgressBar(filename, statusData) {
+        if (statusData.status === 'processing') {
+            return `
+                <div class="progress mb-2" style="height: 4px;" id="progress-${escapeHtml(filename)}">
+                    <div class="progress-bar bg-primary" role="progressbar" 
+                         style="width: ${statusData.progress}%" 
+                         aria-valuenow="${statusData.progress}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                    </div>
+                </div>
+                <small class="text-muted" id="progress-text-${escapeHtml(filename)}">
+                    ${statusData.message || '处理中...'} (${statusData.progress}%)
+                </small>
+            `;
+        } else if (statusData.status === 'completed') {
+            return `
+                <small class="text-success" id="progress-text-${escapeHtml(filename)}">
+                    <i class="fas fa-check-circle me-1"></i>${statusData.message || 'OCR处理完成'}
+                </small>
+            `;
+        } else if (statusData.status === 'failed') {
+            return `
+                <small class="text-danger" id="progress-text-${escapeHtml(filename)}">
+                    <i class="fas fa-exclamation-circle me-1"></i>${statusData.message || '处理失败'}
+                </small>
+            `;
+        }
+        
+        return '';
+    }
+    
+    // 获取操作按钮
+    function getActionButtons(filename, status) {
+        const escapedFilename = escapeHtml(filename);
+        
+        if (status === 'uploaded' || status === 'failed') {
+            return `
+                <button class="btn btn-sm btn-outline-primary" onclick="processFile('${escapedFilename}')" id="btn-process-${escapedFilename}">
+                    <i class="fas fa-cogs"></i> 处理
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteFile('${escapedFilename}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+        } else if (status === 'processing') {
+            return `
+                <button class="btn btn-sm btn-secondary" disabled>
+                    <i class="fas fa-spinner fa-spin"></i> 处理中
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteFile('${escapedFilename}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+        } else if (status === 'completed') {
+            return `
+                <button class="btn btn-sm btn-outline-success" onclick="addToKnowledge('${escapedFilename}')">
+                    <i class="fas fa-plus"></i> 添加到知识库
+                </button>
+                <button class="btn btn-sm btn-outline-info" onclick="viewOCRResult('${escapedFilename}')">
+                    <i class="fas fa-eye"></i> 查看结果
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteFile('${escapedFilename}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+        }
+        
+        return '';
+    }
+    
+    // 更新文件状态显示
+    function updateFileStatus(filename, statusData) {
+        const fileElement = document.getElementById(`file-${filename}`);
+        if (!fileElement) return;
+        
+        // 更新状态徽章
+        const statusBadge = getStatusBadge(statusData.status);
+        const badgeContainer = fileElement.querySelector('.mb-2');
+        if (badgeContainer) {
+            // 移除旧的状态徽章，保留类型和领域徽章
+            const badges = badgeContainer.querySelectorAll('.badge');
+            badges.forEach(badge => {
+                if (badge.textContent.includes('已上传') || 
+                    badge.textContent.includes('处理中') || 
+                    badge.textContent.includes('已完成') || 
+                    badge.textContent.includes('处理失败')) {
+                    badge.remove();
+                }
+            });
+            badgeContainer.insertAdjacentHTML('beforeend', statusBadge);
+        }
+        
+        // 更新进度条
+        const progressBar = getProgressBar(filename, statusData);
+        const existingProgress = fileElement.querySelector(`#progress-${filename}`);
+        const existingProgressText = fileElement.querySelector(`#progress-text-${filename}`);
+        
+        if (existingProgress) existingProgress.remove();
+        if (existingProgressText) existingProgressText.remove();
+        
+        if (progressBar) {
+            const smallElement = fileElement.querySelector('small.text-muted');
+            if (smallElement) {
+                smallElement.insertAdjacentHTML('beforebegin', progressBar);
+            }
+        }
+        
+        // 更新操作按钮
+        const actionButtons = getActionButtons(filename, statusData.status);
+        const btnGroup = fileElement.querySelector('.btn-group');
+        if (btnGroup) {
+            btnGroup.innerHTML = actionButtons;
+        }
+    }
+    
+    // 更新统计信息
+    function updateStatistics(files) {
+        // 总文件数和大小
+        document.getElementById('totalFiles').textContent = files.length;
+        const totalSize = files.reduce((sum, file) => sum + file.size_mb, 0);
+        document.getElementById('totalSize').textContent = totalSize.toFixed(1) + 'MB';
+        
+        // 文档类型统计
+        const typeStats = {};
+        const domainStats = {};
+        
+        files.forEach(file => {
+            // 统计文档类型
+            const type = file.document_type || 'general';
+            typeStats[type] = (typeStats[type] || 0) + 1;
+            
+            // 统计工程领域
+            const domain = file.engineering_domain || 'general';
+            domainStats[domain] = (domainStats[domain] || 0) + 1;
+        });
+        
+        // 显示文档类型统计
+        displayTypeStats(typeStats);
+        displayDomainStats(domainStats);
+    }
+    
+    // 显示文档类型统计
+    function displayTypeStats(stats) {
+        const container = document.getElementById('documentTypes');
+        let html = '';
+        
+        const typeNames = {
+            'technical_manual': '技术手册',
+            'engineering_drawing': '工程图纸',
+            'process_diagram': '工艺流程图',
+            'general': '通用文档'
+        };
+        
+        for (let [type, count] of Object.entries(stats)) {
+            const name = typeNames[type] || type;
+            html += `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>${name}</span>
+                    <span class="badge bg-primary">${count}</span>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html || '<p class="text-muted small">暂无数据</p>';
+    }
+    
+    // 显示工程领域统计
+    function displayDomainStats(stats) {
+        const container = document.getElementById('engineeringDomains');
+        let html = '';
+        
+        const domainNames = {
+            'mechanical': '机械工程',
+            'electrical': '电气工程',
+            'chemical': '化工工程',
+            'civil': '土木工程',
+            'aerospace': '航空航天',
+            'general': '通用'
+        };
+        
+        for (let [domain, count] of Object.entries(stats)) {
+            const name = domainNames[domain] || domain;
+            html += `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>${name}</span>
+                    <span class="badge bg-secondary">${count}</span>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html || '<p class="text-muted small">暂无数据</p>';
+    }
+    
+    // 处理文件（OCR）
+    async function processFile(filename) {
+        try {
+            // 设置处理状态为开始
+            setProcessingStatus(filename, 'processing', 0, '正在初始化...');
+            showNotification('开始处理文件...', 'info');
+            
+            // 模拟处理进度
+            const progressSteps = [
+                { progress: 10, message: '连接InterVL API服务...' },
+                { progress: 25, message: '上传文件到OCR服务...' },
+                { progress: 40, message: '执行OCR识别中...' },
+                { progress: 65, message: '解析文档结构...' },
+                { progress: 80, message: '提取技术信息...' },
+                { progress: 95, message: '生成结构化数据...' }
+            ];
+            
+            // 逐步更新进度
+            for (let step of progressSteps) {
+                setProcessingStatus(filename, 'processing', step.progress, step.message);
+                await new Promise(resolve => setTimeout(resolve, 800)); // 模拟处理时间
+            }
+            
+            // 调用实际的OCR API
+            const response = await apiRequest('/api/ocr/process', {
+                method: 'POST',
+                body: JSON.stringify({
+                    file_path: `data/uploads/${filename}`
+                })
+            });
+            
+            if (response.success) {
+                // 处理成功
+                setProcessingStatus(filename, 'completed', 100, `OCR处理完成，识别${response.text ? response.text.length : 0}个字符`);
+                showNotification('文件处理完成', 'success');
+                
+                // 保存OCR结果到localStorage
+                const resultKey = `ocr_result_${filename}`;
+                localStorage.setItem(resultKey, JSON.stringify({
+                    text: response.text || '',
+                    confidence: response.confidence || 0,
+                    technical_tables: response.technical_tables || [],
+                    process_diagrams: response.process_diagrams || [],
+                    annotations: response.annotations || [],
+                    specifications: response.specifications || [],
+                    metadata: response.metadata || {},
+                    timestamp: Date.now()
+                }));
+                
+                // 更新统计
+                updateProcessedCount();
+                
+            } else {
+                // 处理失败
+                const errorMessage = response.error || '未知错误';
+                setProcessingStatus(filename, 'failed', 0, errorMessage);
+                showNotification(`文件处理失败: ${errorMessage}`, 'danger');
+            }
+            
+        } catch (error) {
+            // 异常处理
+            const errorMessage = error.message || '网络连接失败';
+            setProcessingStatus(filename, 'failed', 0, errorMessage);
+            showNotification(`处理失败: ${errorMessage}`, 'danger');
+            console.error('OCR处理错误:', error);
+        }
+    }
+    
+    // 查看OCR结果
+    function viewOCRResult(filename) {
+        const resultKey = `ocr_result_${filename}`;
+        const savedResult = localStorage.getItem(resultKey);
+        
+        if (!savedResult) {
+            showNotification('未找到OCR结果', 'warning');
+            return;
+        }
+        
+        try {
+            const result = JSON.parse(savedResult);
+            showOCRResultModal(filename, result);
+        } catch (e) {
+            showNotification('OCR结果数据损坏', 'danger');
+        }
+    }
+    
+    // 显示OCR结果模态框
+    function showOCRResultModal(filename, result) {
+        const modalHTML = `
+            <div class="modal fade" id="ocrResultModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-file-alt me-2"></i>
+                                OCR处理结果 - ${escapeHtml(filename)}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6>识别文本</h6>
+                                    <div class="border rounded p-3 mb-3" style="max-height: 400px; overflow-y: auto; background: #f8f9fa;">
+                                        <pre style="white-space: pre-wrap; font-family: inherit;">${escapeHtml(result.text || '无识别文本')}</pre>
+                                    </div>
+                                    
+                                    ${result.technical_tables && result.technical_tables.length > 0 ? `
+                                        <h6>技术表格</h6>
+                                        <div class="mb-3">
+                                            ${result.technical_tables.map((table, index) => `
+                                                <div class="border rounded p-2 mb-2">
+                                                    <small class="text-muted">表格 ${index + 1}</small>
+                                                    <div class="text-truncate">${escapeHtml(JSON.stringify(table))}</div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>处理信息</h6>
+                                    <div class="card bg-light">
+                                        <div class="card-body small">
+                                            <div class="mb-2">
+                                                <strong>置信度:</strong> 
+                                                <span class="badge bg-${result.confidence > 0.8 ? 'success' : result.confidence > 0.6 ? 'warning' : 'danger'}">
+                                                    ${(result.confidence * 100).toFixed(1)}%
+                                                </span>
+                                            </div>
+                                            <div class="mb-2"><strong>文本长度:</strong> ${result.text ? result.text.length : 0} 字符</div>
+                                            <div class="mb-2"><strong>技术表格:</strong> ${result.technical_tables ? result.technical_tables.length : 0} 个</div>
+                                            <div class="mb-2"><strong>工艺图:</strong> ${result.process_diagrams ? result.process_diagrams.length : 0} 个</div>
+                                            <div class="mb-2"><strong>标注:</strong> ${result.annotations ? result.annotations.length : 0} 个</div>
+                                            <div class="mb-2"><strong>规格:</strong> ${result.specifications ? result.specifications.length : 0} 个</div>
+                                            <div><strong>处理时间:</strong> ${new Date(result.timestamp).toLocaleString('zh-CN')}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2 mt-3">
+                                        <button class="btn btn-primary" onclick="downloadOCRResult('${escapeHtml(filename)}')">
+                                            <i class="fas fa-download me-1"></i>导出结果
+                                        </button>
+                                        <button class="btn btn-success" onclick="addToKnowledgeFromResult('${escapeHtml(filename)}')">
+                                            <i class="fas fa-plus me-1"></i>添加到知识库
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // 移除已存在的模态框
+        const existingModal = document.getElementById('ocrResultModal');
+        if (existingModal) existingModal.remove();
+        
+        // 添加新模态框
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('ocrResultModal'));
+        modal.show();
+    }
+    
+    // 导出OCR结果
+    function downloadOCRResult(filename) {
+        const resultKey = `ocr_result_${filename}`;
+        const savedResult = localStorage.getItem(resultKey);
+        
+        if (!savedResult) {
+            showNotification('未找到OCR结果', 'warning');
+            return;
+        }
+        
+        try {
+            const result = JSON.parse(savedResult);
+            
+            // 创建导出内容
+            const exportData = {
+                filename: filename,
+                ocr_result: result,
+                export_time: new Date().toISOString()
+            };
+            
+            // 创建下载链接
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}_ocr_result.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('OCR结果已导出', 'success');
+        } catch (e) {
+            showNotification('导出失败', 'danger');
+        }
+    }
+    
+    // 从OCR结果添加到知识库
+    async function addToKnowledgeFromResult(filename) {
+        const resultKey = `ocr_result_${filename}`;
+        const savedResult = localStorage.getItem(resultKey);
+        
+        if (!savedResult) {
+            showNotification('未找到OCR结果', 'warning');
+            return;
+        }
+        
+        try {
+            const result = JSON.parse(savedResult);
+            await addToKnowledge(filename, result.text);
+        } catch (e) {
+                showNotification('添加到知识库失败', 'danger');
+            }
+    }
+    
+    // 更新已处理文件计数
+    function updateProcessedCount() {
+        // 计算已完成处理的文件数量
+        let processedCount = 0;
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('file_status_')) {
+                try {
+                    const status = JSON.parse(localStorage.getItem(key));
+                    if (status.status === 'completed') {
+                        processedCount++;
+                    }
+                } catch (e) {
+                    // 忽略解析错误
+                }
+            }
+        }
+        
+        const processedElement = document.getElementById('processedFiles');
+        if (processedElement) {
+            processedElement.textContent = processedCount;
+        }
+    }
+    
+    // 删除文件
+    async function deleteFile(filename) {
+        if (confirm(`确定要删除文件 "${filename}" 吗？`)) {
+            try {
+                showNotification('正在删除文件...', 'info');
+                
+                const response = await apiRequest(`/api/files/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.success) {
+                    showNotification(`文件 "${filename}" 删除成功`, 'success');
+                    
+                    // 清除该文件的本地存储状态
+                    const statusKey = `file_status_${filename}`;
+                    const resultKey = `ocr_result_${filename}`;
+                    localStorage.removeItem(statusKey);
+                    localStorage.removeItem(resultKey);
+                    
+                    // 刷新文件列表
+                    await loadFileList();
+                    updateProcessedCount();
+                } else {
+                    showNotification(`删除失败: ${response.error}`, 'danger');
+                }
+            } catch (error) {
+                showNotification(`删除失败: ${error.message}`, 'danger');
+            }
+        }
+    }
+    
+    // 刷新文件列表
+    function refreshFileList() {
+        loadFileList();
+        showNotification('文件列表已刷新', 'info');
+    }
+    
+    // 清空所有文件
+    async function clearAllFiles() {
+        if (confirm('确定要清空所有上传的文件吗？此操作不可恢复。')) {
+            try {
+                showNotification('正在清空所有文件...', 'info');
+                
+                const response = await apiRequest('/api/files/clear', {
+                    method: 'POST'
+                });
+                
+                if (response.success) {
+                    showNotification(response.message, 'success');
+                    
+                    // 清除所有文件相关的本地存储
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && (key.startsWith('file_status_') || key.startsWith('ocr_result_'))) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    keysToRemove.forEach(key => localStorage.removeItem(key));
+                    
+                    // 刷新文件列表
+                    await loadFileList();
+                    updateProcessedCount();
+                } else {
+                    showNotification(`清空失败: ${response.error}`, 'danger');
+                }
+            } catch (error) {
+                showNotification(`清空失败: ${error.message}`, 'danger');
+            }
+        }
+    }
+    
+    // 工具函数
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // 添加到知识库
+    async function addToKnowledge(filename, ocrText = null) {
+        try {
+            // 如果没有提供OCR文本，尝试从localStorage获取
+            if (!ocrText) {
+                const resultKey = `ocr_result_${filename}`;
+                const savedResult = localStorage.getItem(resultKey);
+                
+                if (savedResult) {
+                    try {
+                        const result = JSON.parse(savedResult);
+                        ocrText = result.text;
+                        console.log(`从localStorage获取OCR结果: ${ocrText ? ocrText.length : 0} 字符`);
+                    } catch (e) {
+                        console.error('解析localStorage中的OCR结果失败:', e);
+                    }
+                }
+                
+                // 如果还是没有OCR文本，提示用户先进行处理
+                if (!ocrText || !ocrText.trim()) {
+                    showNotification('⚠️ 请先点击"处理"按钮进行OCR识别，然后再添加到知识库', 'warning');
+                    return;
+                }
+            }
+            
+            // 显示知识库选择对话框
+            showKnowledgeBaseSelectionModal(filename, ocrText);
+            
+        } catch (error) {
+            console.error('添加到知识库失败:', error);
+            showNotification(`❌ 添加失败: ${error.message}`, 'danger');
+        }
+    }
+
+    // 显示知识库选择模态框
+    async function showKnowledgeBaseSelectionModal(filename, ocrText) {
+        // 获取现有知识库列表
+        showNotification('正在获取知识库列表...', 'info');
+        
+        try {
+            const response = await apiRequest('/api/ragflow/datasets/overview');
+            
+            if (!response.success) {
+                throw new Error(response.error || '获取知识库列表失败');
+            }
+            
+            const datasets = response.data.datasets || [];
+            
+            // 创建模态框HTML
+            const modalHtml = `
+                <div class="modal fade" id="knowledgeBaseModal" tabindex="-1" aria-labelledby="knowledgeBaseModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="knowledgeBaseModalLabel">
+                                    <i class="fas fa-database me-2"></i>添加到知识库
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <label class="form-label">选择操作方式</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="operationType" id="addToExisting" value="existing" ${datasets.length > 0 ? 'checked' : ''}>
+                                                <label class="form-check-label" for="addToExisting">
+                                                    添加到已有知识库
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="operationType" id="createNew" value="new" ${datasets.length === 0 ? 'checked' : ''}>
+                                                <label class="form-check-label" for="createNew">
+                                                    创建新知识库
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- 已有知识库选择 -->
+                                        <div id="existingKnowledgeBase" style="display: ${datasets.length > 0 ? 'block' : 'none'};">
+                                            <div class="mb-3">
+                                                <label class="form-label">选择知识库</label>
+                                                <select class="form-select" id="datasetSelect">
+                                                    <option value="">请选择知识库</option>
+                                                    ${datasets.map(dataset => 
+                                                        `<option value="${dataset.id}" data-parser="${dataset.parser_id || 'naive'}" data-chunk-method="${dataset.chunk_method || 'naive'}" data-embedding="${dataset.embd_id || 'BAAI/bge-large-zh-v1.5@BAAI'}">${dataset.name}</option>`
+                                                    ).join('')}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <!-- 新建知识库配置 -->
+                                        <div id="newKnowledgeBase" style="display: ${datasets.length === 0 ? 'block' : 'none'};">
+                                            <div class="mb-3">
+                                                <label class="form-label">知识库名称</label>
+                                                <input type="text" class="form-control" id="newDatasetName" placeholder="请输入知识库名称" value="工程文档知识库">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">知识库描述</label>
+                                                <textarea class="form-control" id="newDatasetDescription" rows="2" placeholder="请输入知识库描述">工程文档OCR处理结果知识库</textarea>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">PDF解析器</label>
+                                                        <select class="form-select" id="parserType">
+                                                            <option value="naive">General (通用)</option>
+                                                            <option value="manual">Manual (手册)</option>
+                                                            <option value="paper">Paper (论文)</option>
+                                                            <option value="book">Book (书籍)</option>
+                                                            <option value="laws">Laws (法规)</option>
+                                                            <option value="presentation">Presentation (演示)</option>
+                                                            <option value="one">One (整体)</option>
+                                                            <option value="qa">Q&A (问答)</option>
+                                                            <option value="table">Table (表格)</option>
+                                                            <option value="resume">Resume (简历)</option>
+                                                            <option value="picture">Picture (图片)</option>
+                                                            <option value="email">Email (邮件)</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">切片方法</label>
+                                                        <select class="form-select" id="chunkMethod">
+                                                            <option value="naive">General (通用切片)</option>
+                                                            <option value="manual">Manual (手动切片)</option>
+                                                            <option value="qa">Q&A (问答切片)</option>
+                                                            <option value="table">Table (表格切片)</option>
+                                                            <option value="paper">Paper (论文切片)</option>
+                                                            <option value="book">Book (书籍切片)</option>
+                                                            <option value="laws">Laws (法规切片)</option>
+                                                            <option value="presentation">Presentation (演示切片)</option>
+                                                            <option value="one">One (整体切片)</option>
+                                                            <option value="resume">Resume (简历切片)</option>
+                                                            <option value="picture">Picture (图片切片)</option>
+                                                            <option value="email">Email (邮件切片)</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">嵌入模型</label>
+                                                        <select class="form-select" id="embeddingModel">
+                                                            <option value="BAAI/bge-large-zh-v1.5@BAAI">BAAI/bge-large-zh-v1.5</option>
+                                                            <option value="BAAI/bge-m3@BAAI">BAAI/bge-m3</option>
+                                                            <option value="text-embedding-v2@Tongyi-Qianwen">Tongyi-Qianwen text-embedding-v2</option>
+                                                            <option value="text-embedding-v3@Tongyi-Qianwen">Tongyi-Qianwen text-embedding-v3</option>
+                                                            <option value="maidalun1020/bce-embedding-base_v1@Youdao">BCE Embedding Base v1</option>
+                                                            <option value="Baichuan-Text-Embedding@BaiChuan">百川文本嵌入</option>
+                                                            <option value="text-embedding-ada-002@OpenAI">OpenAI text-embedding-ada-002</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">文本块大小</label>
+                                                        <input type="number" class="form-control" id="chunkSize" value="128" min="64" max="2048" step="64">
+                                                        <div class="form-text">建议值：128-512</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="layoutRecognize" checked>
+                                                        <label class="form-check-label" for="layoutRecognize">
+                                                            启用DeepDoc布局识别
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="raptor">
+                                                        <label class="form-check-label" for="raptor">
+                                                            使用RAPTOR分层聚合
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body">
+                                                <h6 class="card-title">
+                                                    <i class="fas fa-info-circle me-2"></i>配置说明
+                                                </h6>
+                                                <div class="small">
+                                                    <p><strong>PDF解析器：</strong></p>
+                                                    <ul class="list-unstyled">
+                                                        <li>• <strong>General</strong>: 通用文档解析</li>
+                                                        <li>• <strong>Manual</strong>: 技术手册专用</li>
+                                                        <li>• <strong>Paper</strong>: 学术论文专用</li>
+                                                        <li>• <strong>Book</strong>: 书籍章节结构</li>
+                                                    </ul>
+                                                    
+                                                    <p><strong>嵌入模型：</strong></p>
+                                                    <ul class="list-unstyled">
+                                                        <li>• <strong>BAAI/bge-large-zh-v1.5</strong>: 中文优化，推荐</li>
+                                                        <li>• <strong>Tongyi-Qianwen</strong>: 阿里通义千问</li>
+                                                        <li>• <strong>BCE</strong>: 网易有道</li>
+                                                    </ul>
+                                                    
+                                                    <p><strong>文本块大小：</strong></p>
+                                                    <p>控制每个知识片段的长度，影响检索精度和召回效果。</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="confirmKnowledgeBase">
+                                    <i class="fas fa-plus me-1"></i>添加到知识库
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 移除已存在的模态框
+            const existingModal = document.getElementById('knowledgeBaseModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // 添加新模态框到页面
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // 添加事件监听器
+            document.getElementById('addToExisting').addEventListener('change', function() {
+                if (this.checked) {
+                    document.getElementById('existingKnowledgeBase').style.display = 'block';
+                    document.getElementById('newKnowledgeBase').style.display = 'none';
+                }
+            });
+            
+            document.getElementById('createNew').addEventListener('change', function() {
+                if (this.checked) {
+                    document.getElementById('existingKnowledgeBase').style.display = 'none';
+                    document.getElementById('newKnowledgeBase').style.display = 'block';
+                }
+            });
+            
+            // 添加确认按钮事件监听器
+            document.getElementById('confirmKnowledgeBase').addEventListener('click', function() {
+                processKnowledgeBaseSelection(filename, ocrText);
+            });
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('knowledgeBaseModal'));
+            modal.show();
+            
+        } catch (error) {
+            console.error('获取知识库列表失败:', error);
+            showNotification(`❌ 获取知识库列表失败: ${error.message}`, 'danger');
+        }
+    }
+
+    // 处理知识库选择
+    async function processKnowledgeBaseSelection(filename, ocrText) {
+        try {
+            const operationType = document.querySelector('input[name="operationType"]:checked').value;
+            
+            let requestData = {
+                file_path: `data/uploads/${filename}`,
+                ocr_result: ocrText
+            };
+            
+            if (operationType === 'existing') {
+                // 添加到已有知识库
+                const datasetSelect = document.getElementById('datasetSelect');
+                const selectedOption = datasetSelect.selectedOptions[0];
+                
+                if (!datasetSelect.value) {
+                    showNotification('❌ 请选择一个知识库', 'warning');
+                    return;
+                }
+                
+                requestData.dataset_id = datasetSelect.value;
+                requestData.dataset_name = selectedOption.text;
+                
+            } else {
+                // 创建新知识库
+                const datasetName = document.getElementById('newDatasetName').value.trim();
+                const datasetDescription = document.getElementById('newDatasetDescription').value.trim();
+                const parserType = document.getElementById('parserType').value;
+                const chunkMethod = document.getElementById('chunkMethod').value;
+                const embeddingModel = document.getElementById('embeddingModel').value;
+                const chunkSize = parseInt(document.getElementById('chunkSize').value);
+                const layoutRecognize = document.getElementById('layoutRecognize').checked;
+                const raptor = document.getElementById('raptor').checked;
+                
+                if (!datasetName) {
+                    showNotification('❌ 请输入知识库名称', 'warning');
+                    return;
+                }
+                
+                requestData.create_new = true;
+                requestData.dataset_name = datasetName;
+                requestData.dataset_description = datasetDescription;
+                requestData.parser_config = {
+                    parser_id: parserType,
+                    chunk_method: chunkMethod,
+                    chunk_token_num: chunkSize,
+                    layout_recognize: layoutRecognize ? "DeepDoc" : "Plain Text",
+                    raptor: raptor,
+                    delimiter: "\n!?。；！？"
+                };
+                requestData.embedding_model = embeddingModel;
+            }
+            
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('knowledgeBaseModal'));
+            modal.hide();
+            
+            showNotification('正在添加到知识库...', 'info');
+            
+            console.log(`准备发送知识库添加请求: OCR文本长度=${ocrText.length}`);
+            
+            const response = await apiRequest('/api/knowledge/add', {
+                method: 'POST',
+                body: JSON.stringify(requestData)
+            });
+            
+            if (response.success) {
+                showNotification('✅ 已成功添加到知识库', 'success');
+                
+                // 刷新知识库页面数据（如果用户在知识库页面）
+                if (window.location.pathname === '/knowledge') {
+                    if (typeof loadKnowledgeBaseStats === 'function') loadKnowledgeBaseStats();
+                    if (typeof loadDocuments === 'function') loadDocuments();
+                }
+                
+            } else {
+                const errorMessage = response.error || '添加到知识库失败';
+                showNotification(`❌ ${errorMessage}`, 'danger');
+            }
+        } catch (error) {
+            console.error('添加到知识库失败:', error);
+            showNotification(`❌ 添加失败: ${error.message}`, 'danger');
+        }
+    }
+</script>
+{% endblock %} 

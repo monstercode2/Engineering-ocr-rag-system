@@ -1,0 +1,631 @@
+{% extends "base.html" %}
+
+{% block title %}RAGFlow 数据集管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 头部标题 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-database text-primary me-2"></i>
+                        RAGFlow 数据集管理
+                    </h2>
+                    <p class="text-muted mb-0">管理您的知识库数据集，配置文档解析和检索参数</p>
+                </div>
+                <div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDatasetModal">
+                        <i class="fas fa-plus me-1"></i>新建数据集
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据集列表 -->
+    <div class="row">
+        <!-- 左侧：数据集列表 -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-folder me-2"></i>数据集列表
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <select class="form-select form-select-sm me-2" id="typeFilter" style="width: auto;">
+                            <option value="">所有类型</option>
+                            <option value="通用文档">通用文档</option>
+                            <option value="工程文档">工程文档</option>
+                        </select>
+                        <div class="input-group input-group-sm" style="width: 200px;">
+                            <input type="text" class="form-control" placeholder="搜索数据集..." id="searchDatasets">
+                            <button class="btn btn-outline-secondary" type="button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="datasetsContainer">
+                        <!-- 数据集列表将动态加载 -->
+                        <div class="text-center p-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="mt-2">正在加载数据集...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：领域分布和操作 -->
+        <div class="col-md-6">
+            <div class="row">
+                <!-- 领域分布图 -->
+                <div class="col-12 mb-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-pie me-2"></i>领域分布
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="domainChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 知识库操作 -->
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-tools me-2"></i>知识库操作
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <button class="btn btn-outline-primary w-100" id="rebuildIndexBtn">
+                                        <i class="fas fa-sync-alt me-1"></i>重建索引
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button class="btn btn-outline-warning w-100" id="optimizeStorageBtn">
+                                        <i class="fas fa-compress-arrows-alt me-1"></i>优化存储
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button class="btn btn-outline-info w-100" id="validateIntegrityBtn">
+                                        <i class="fas fa-check-circle me-1"></i>验证完整性
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button class="btn btn-outline-danger w-100" id="clearKnowledgeBtn">
+                                        <i class="fas fa-trash me-1"></i>清空知识库
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据集详情模态框 -->
+    <div class="modal fade" id="datasetDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-database me-2"></i>数据集详情
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 标签页导航 -->
+                    <ul class="nav nav-tabs" id="datasetTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="files-tab" data-bs-toggle="tab" data-bs-target="#files" type="button" role="tab">
+                                <i class="fas fa-file me-1"></i>数据集
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="testing-tab" data-bs-toggle="tab" data-bs-target="#testing" type="button" role="tab">
+                                <i class="fas fa-search me-1"></i>检索测试
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="configuration-tab" data-bs-toggle="tab" data-bs-target="#configuration" type="button" role="tab">
+                                <i class="fas fa-cog me-1"></i>配置
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- 标签页内容 -->
+                    <div class="tab-content mt-3" id="datasetTabContent">
+                        <!-- 数据集文件 -->
+                        <div class="tab-pane fade show active" id="files" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">文档列表</h6>
+                                <button class="btn btn-sm btn-primary" id="addFileBtn">
+                                    <i class="fas fa-plus me-1"></i>新增文件
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>名称</th>
+                                            <th>分块数</th>
+                                            <th>上传日期</th>
+                                            <th>分块方法</th>
+                                            <th>启用</th>
+                                            <th>解析状态</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="documentsTableBody">
+                                        <!-- 文档列表将动态加载 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 检索测试 -->
+                        <div class="tab-pane fade" id="testing" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>检索参数</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label">相似度阈值</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.1" value="0.2" id="similarityThreshold">
+                                        <div class="form-text">当前值: <span id="similarityValue">0.2</span></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">关键词相似度权重</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.1" value="0.3" id="keywordWeight">
+                                        <div class="form-text">当前值: <span id="keywordValue">0.3</span></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">返回结果数量</label>
+                                        <select class="form-select" id="topN">
+                                            <option value="3">3</option>
+                                            <option value="6" selected>6</option>
+                                            <option value="10">10</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">测试查询</label>
+                                        <textarea class="form-control" rows="3" id="testQuery" placeholder="输入测试问题..."></textarea>
+                                    </div>
+                                    <button class="btn btn-primary w-100" id="runTestBtn">
+                                        <i class="fas fa-play me-1"></i>运行测试
+                                    </button>
+                                </div>
+                                <div class="col-md-8">
+                                    <h6>检索结果</h6>
+                                    <div id="testResults">
+                                        <div class="text-center text-muted p-4">
+                                            <i class="fas fa-search fa-3x mb-3"></i>
+                                            <p>输入查询并运行测试以查看检索结果</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 配置 -->
+                        <div class="tab-pane fade" id="configuration" role="tabpanel">
+                            <form id="configurationForm">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>基础配置</h6>
+                                        <div class="mb-3">
+                                            <label class="form-label">分块方法</label>
+                                            <select class="form-select" id="chunkMethod">
+                                                <option value="naive">通用分块</option>
+                                                <option value="manual">手动分块</option>
+                                                <option value="qa">问答分块</option>
+                                                <option value="table">表格分块</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">建议文本块大小</label>
+                                            <input type="range" class="form-range" min="64" max="2048" step="64" value="128" id="chunkSize">
+                                            <div class="form-text">当前值: <span id="chunkSizeValue">128</span></div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">文本分段标识符</label>
+                                            <input type="text" class="form-control" value="\n" id="textSplitter">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>高级选项</h6>
+                                        <div class="mb-3">
+                                            <label class="form-label">嵌入模型</label>
+                                            <select class="form-select" id="embeddingModel">
+                                                <option value="BAAI/bge-large-zh-v1.5">BAAI/bge-large-zh-v1.5</option>
+                                                <option value="BAAI/bge-base-zh-v1.5">BAAI/bge-base-zh-v1.5</option>
+                                                <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="tableToHtml">
+                                            <label class="form-check-label" for="tableToHtml">
+                                                表格转HTML
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="useRaptor">
+                                            <label class="form-check-label" for="useRaptor">
+                                                使用召回增强 RAPTOR 策略
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>保存配置
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建数据集模态框 -->
+    <div class="modal fade" id="createDatasetModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">创建新数据集</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="createDatasetForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">数据集名称 *</label>
+                            <input type="text" class="form-control" id="datasetName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">描述</label>
+                            <textarea class="form-control" rows="3" id="datasetDescription"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">分块方法</label>
+                            <select class="form-select" id="createChunkMethod">
+                                <option value="naive">通用分块</option>
+                                <option value="manual">手动分块</option>
+                                <option value="qa">问答分块</option>
+                                <option value="table">表格分块</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">嵌入模型</label>
+                            <select class="form-select" id="createEmbeddingModel">
+                                <option value="BAAI/bge-large-zh-v1.5@BAAI">BAAI/bge-large-zh-v1.5</option>
+                                <option value="BAAI/bge-base-zh-v1.5@BAAI">BAAI/bge-base-zh-v1.5</option>
+                                <option value="text-embedding-ada-002@OpenAI">text-embedding-ada-002</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">创建数据集</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 引入Chart.js用于图表 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+$(document).ready(function() {
+    let currentDatasetId = null;
+    let domainChart = null;
+
+    // 页面加载时获取数据集概览
+    loadDatasetsOverview();
+
+    // 加载数据集概览
+    function loadDatasetsOverview() {
+        $.get('/api/ragflow/datasets/overview')
+            .done(function(response) {
+                if (response.success) {
+                    displayDatasets(response.data.datasets);
+                    updateDomainChart(response.data.datasets);
+                } else {
+                    showError('加载数据集失败: ' + response.error);
+                }
+            })
+            .fail(function() {
+                showError('网络错误，无法加载数据集');
+            });
+    }
+
+    // 显示数据集列表
+    function displayDatasets(datasets) {
+        const container = $('#datasetsContainer');
+        
+        if (datasets.length === 0) {
+            container.html(`
+                <div class="text-center p-4">
+                    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">暂无数据集</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDatasetModal">
+                        创建第一个数据集
+                    </button>
+                </div>
+            `);
+            return;
+        }
+
+        let html = '';
+        datasets.forEach(dataset => {
+            html += `
+                <div class="border-bottom p-3 dataset-item" data-id="${dataset.id}" style="cursor: pointer;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${dataset.name}</h6>
+                            <p class="text-muted small mb-1">${dataset.description || '无描述'}</p>
+                            <div class="small text-info">
+                                <span class="me-3">
+                                    <i class="fas fa-file me-1"></i>
+                                    ${dataset.document_amount || 0} 文档
+                                </span>
+                                <span class="me-3">
+                                    <i class="fas fa-puzzle-piece me-1"></i>
+                                    ${dataset.chunk_num || 0} 块
+                                </span>
+                                <span>
+                                    <i class="fas fa-clock me-1"></i>
+                                    ${formatDate(dataset.update_time)}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item view-details" href="#" data-id="${dataset.id}">查看详情</a></li>
+                                <li><a class="dropdown-item delete-dataset" href="#" data-id="${dataset.id}">删除</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.html(html);
+    }
+
+    // 更新领域分布图表
+    function updateDomainChart(datasets) {
+        const ctx = document.getElementById('domainChart').getContext('2d');
+        
+        // 统计领域分布（基于真实数据分析）
+        const domainStats = {};
+        datasets.forEach(dataset => {
+            const name = dataset.name.toLowerCase();
+            let domain = '通用';
+            
+            if (name.includes('工程') || name.includes('设备') || name.includes('机械')) {
+                domain = '工程技术';
+            } else if (name.includes('文档') || name.includes('资料')) {
+                domain = '文档资料';
+            }
+            
+            domainStats[domain] = (domainStats[domain] || 0) + 1;
+        });
+
+        if (domainChart) {
+            domainChart.destroy();
+        }
+
+        domainChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(domainStats),
+                datasets: [{
+                    data: Object.values(domainStats),
+                    backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    // 查看数据集详情
+    $(document).on('click', '.dataset-item, .view-details', function(e) {
+        e.preventDefault();
+        const datasetId = $(this).data('id');
+        currentDatasetId = datasetId;
+        loadDatasetDetails(datasetId);
+        $('#datasetDetailsModal').modal('show');
+    });
+
+    // 加载数据集详情
+    function loadDatasetDetails(datasetId) {
+        $.get(`/api/ragflow/datasets/${datasetId}/details`)
+            .done(function(response) {
+                if (response.success) {
+                    displayDatasetDetails(response.data);
+                } else {
+                    showError('加载数据集详情失败: ' + response.error);
+                }
+            })
+            .fail(function() {
+                showError('网络错误，无法加载数据集详情');
+            });
+    }
+
+    // 显示数据集详情
+    function displayDatasetDetails(data) {
+        // 更新模态框标题
+        $('.modal-title').html(`<i class="fas fa-database me-2"></i>${data.dataset.name}`);
+        
+        // 显示文档列表
+        displayDocuments(data.documents);
+    }
+
+    // 显示文档列表
+    function displayDocuments(documents) {
+        const tbody = $('#documentsTableBody');
+        
+        if (documents.length === 0) {
+            tbody.html(`
+                <tr>
+                    <td colspan="7" class="text-center text-muted">
+                        暂无文档，点击"新增文件"按钮添加文档
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        let html = '';
+        documents.forEach(doc => {
+            html += `
+                <tr>
+                    <td>
+                        <i class="fas fa-file me-2"></i>
+                        ${doc.name}
+                    </td>
+                    <td>${doc.chunk_num || 0}</td>
+                    <td>${formatDate(doc.create_time)}</td>
+                    <td><span class="badge bg-secondary">${doc.parser_config?.chunk_method || 'General'}</span></td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" ${doc.status === 'enabled' ? 'checked' : ''} 
+                                   data-doc-id="${doc.id}">
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge ${getStatusBadgeClass(doc.run)}">
+                            ${getStatusText(doc.run)}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary reparse-doc" data-doc-id="${doc.id}" title="重新解析">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tbody.html(html);
+    }
+
+    // 创建数据集表单提交
+    $('#createDatasetForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            name: $('#datasetName').val(),
+            description: $('#datasetDescription').val(),
+            chunk_method: $('#createChunkMethod').val(),
+            embedding_model: $('#createEmbeddingModel').val()
+        };
+
+        $.post('/api/ragflow/datasets', formData)
+            .done(function(response) {
+                if (response.success) {
+                    showSuccess(response.message);
+                    $('#createDatasetModal').modal('hide');
+                    $('#createDatasetForm')[0].reset();
+                    loadDatasetsOverview(); // 重新加载列表
+                } else {
+                    showError('创建失败: ' + response.error);
+                }
+            })
+            .fail(function() {
+                showError('网络错误，创建失败');
+            });
+    });
+
+    // 删除数据集
+    $(document).on('click', '.delete-dataset', function(e) {
+        e.preventDefault();
+        const datasetId = $(this).data('id');
+        
+        if (confirm('确定要删除这个数据集吗？此操作不可恢复。')) {
+            $.ajax({
+                url: `/api/ragflow/datasets/${datasetId}`,
+                type: 'DELETE'
+            })
+            .done(function(response) {
+                if (response.success) {
+                    showSuccess('数据集删除成功');
+                    loadDatasetsOverview(); // 重新加载列表
+                } else {
+                    showError('删除失败: ' + response.error);
+                }
+            })
+            .fail(function() {
+                showError('网络错误，删除失败');
+            });
+        }
+    });
+
+    // 工具函数
+    function formatDate(dateString) {
+        if (!dateString) return '未知';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function getStatusBadgeClass(status) {
+        switch (status) {
+            case 'completed': return 'bg-success';
+            case 'processing': return 'bg-warning';
+            case 'failed': return 'bg-danger';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function getStatusText(status) {
+        switch (status) {
+            case 'completed': return '已完成';
+            case 'processing': return '处理中';
+            case 'failed': return '失败';
+            default: return '未知';
+        }
+    }
+
+    function showSuccess(message) {
+        // 可以使用 toast 或其他通知组件
+        alert('成功: ' + message);
+    }
+
+    function showError(message) {
+        // 可以使用 toast 或其他通知组件
+        alert('错误: ' + message);
+    }
+});
+</script>
+{% endblock %} 

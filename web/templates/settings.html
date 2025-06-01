@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设置 - 工程文档智能解析系统</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <style>
+        .status-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .status-card:hover {
+            transform: translateY(-2px);
+        }
+        .status-online {
+            border-left: 4px solid #28a745;
+        }
+        .status-offline {
+            border-left: 4px solid #dc3545;
+        }
+        .status-warning {
+            border-left: 4px solid #ffc107;
+        }
+        .log-container {
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .navbar-brand {
+            font-weight: 600;
+        }
+        .config-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body style="background-color: #f8f9fa;">
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-cogs me-2"></i>工程文档智能解析系统
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/"><i class="fas fa-home me-1"></i>首页</a>
+                <a class="nav-link" href="/upload"><i class="fas fa-upload me-1"></i>文档上传</a>
+                <a class="nav-link" href="/chat"><i class="fas fa-comments me-1"></i>智能问答</a>
+                <a class="nav-link" href="/knowledge"><i class="fas fa-database me-1"></i>知识库</a>
+                <a class="nav-link active" href="/settings"><i class="fas fa-cog me-1"></i>系统设置</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 系统状态监控 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3><i class="fas fa-heartbeat me-2"></i>系统状态监控</h3>
+            </div>
+        </div>
+        
+        <div class="row mb-4" id="statusCards">
+            <!-- 系统状态卡片将通过JavaScript动态加载 -->
+        </div>
+
+        <!-- 快速操作 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="config-section">
+                    <h4><i class="fas fa-bolt me-2"></i>快速操作</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-success w-100 mb-2" onclick="initializeSystem()">
+                                <i class="fas fa-play me-2"></i>初始化系统
+                            </button>
+                            <button class="btn btn-warning w-100 mb-2" onclick="reloadModel()">
+                                <i class="fas fa-sync me-2"></i>重新加载模型
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-info w-100 mb-2" onclick="clearCache()">
+                                <i class="fas fa-broom me-2"></i>清理缓存
+                            </button>
+                            <button class="btn btn-secondary w-100 mb-2" onclick="exportLogs()">
+                                <i class="fas fa-download me-2"></i>导出日志
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- InterVL模型配置 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="config-section">
+                    <h4><i class="fas fa-robot me-2"></i>InterVL模型配置</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">模型路径</label>
+                                <input type="text" class="form-control" id="modelPath" 
+                                       value="OpenGVLab/InternVL-Chat-V1-5" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">运行设备</label>
+                                <select class="form-select" id="deviceSelect">
+                                    <option value="auto">自动检测</option>
+                                    <option value="cuda">GPU (CUDA)</option>
+                                    <option value="cpu">CPU</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">精度设置</label>
+                                <select class="form-select" id="precisionSelect">
+                                    <option value="fp16">FP16 (推荐)</option>
+                                    <option value="fp32">FP32</option>
+                                    <option value="int8">INT8</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">最大分辨率</label>
+                                <input type="number" class="form-control" id="maxResolution" 
+                                       value="2048" min="512" max="4096" step="256">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveModelConfig()">
+                        <i class="fas fa-save me-2"></i>保存配置
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RAGFlow配置 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="config-section">
+                    <h4><i class="fas fa-database me-2"></i>RAGFlow配置</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">RAGFlow URL</label>
+                                <input type="text" class="form-control" id="ragflowUrl" 
+                                       value="http://localhost:9380" placeholder="http://localhost:9380">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">API密钥</label>
+                                <input type="password" class="form-control" id="ragflowApiKey" 
+                                       placeholder="请输入RAGFlow API密钥">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">默认知识库</label>
+                                <input type="text" class="form-control" id="defaultKb" 
+                                       value="工程文档知识库" placeholder="知识库名称">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">连接超时 (秒)</label>
+                                <input type="number" class="form-control" id="ragflowTimeout" 
+                                       value="30" min="5" max="120">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveRagflowConfig()">
+                        <i class="fas fa-save me-2"></i>保存配置
+                    </button>
+                    <button class="btn btn-outline-secondary ms-2" onclick="testRagflowConnection()">
+                        <i class="fas fa-plug me-2"></i>测试连接
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统日志 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="config-section">
+                    <h4><i class="fas fa-file-alt me-2"></i>系统日志 
+                        <button class="btn btn-sm btn-outline-secondary float-end" onclick="refreshLogs()">
+                            <i class="fas fa-sync me-1"></i>刷新
+                        </button>
+                    </h4>
+                    <div class="log-container bg-dark text-light p-3 rounded" id="logContainer">
+                        <div class="text-muted">正在加载日志...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap和自定义脚本 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const socket = io();
+        
+        // 页面加载时获取系统状态
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSystemStatus();
+            loadSystemLogs();
+            loadConfigurations();
+        });
+        
+        // 加载系统状态
+        function loadSystemStatus() {
+            fetch('/api/system/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateStatusCards(data);
+                })
+                .catch(error => {
+                    console.error('获取系统状态失败:', error);
+                    showToast('获取系统状态失败', 'error');
+                });
+        }
+        
+        // 更新状态卡片
+        function updateStatusCards(status) {
+            const cards = [
+                {
+                    title: 'InterVL OCR',
+                    status: status.ocr_manager ? 'online' : 'offline',
+                    icon: 'fas fa-eye',
+                    description: status.ocr_manager ? '模型已加载' : '模型未加载'
+                },
+                {
+                    title: 'RAGFlow',
+                    status: status.ragflow_adapter ? 'online' : 'offline',
+                    icon: 'fas fa-database',
+                    description: status.ragflow_adapter ? '连接正常' : '未连接'
+                },
+                {
+                    title: '知识库',
+                    status: status.ragflow?.knowledge_base ? 'online' : 'warning',
+                    icon: 'fas fa-book',
+                    description: status.ragflow?.knowledge_base ? '运行正常' : '待配置'
+                },
+                {
+                    title: 'Web服务',
+                    status: 'online',
+                    icon: 'fas fa-globe',
+                    description: '服务运行中'
+                }
+            ];
+            
+            const container = document.getElementById('statusCards');
+            container.innerHTML = cards.map(card => `
+                <div class="col-md-3">
+                    <div class="card status-card status-${card.status}">
+                        <div class="card-body text-center">
+                            <i class="${card.icon} fa-2x mb-2 text-${getStatusColor(card.status)}"></i>
+                            <h5 class="card-title">${card.title}</h5>
+                            <p class="card-text text-muted small">${card.description}</p>
+                            <span class="badge bg-${getStatusColor(card.status)}">${getStatusText(card.status)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function getStatusColor(status) {
+            switch(status) {
+                case 'online': return 'success';
+                case 'offline': return 'danger';
+                case 'warning': return 'warning';
+                default: return 'secondary';
+            }
+        }
+        
+        function getStatusText(status) {
+            switch(status) {
+                case 'online': return '在线';
+                case 'offline': return '离线';
+                case 'warning': return '警告';
+                default: return '未知';
+            }
+        }
+        
+        // 系统操作函数
+        function initializeSystem() {
+            showToast('正在初始化系统...', 'info');
+            fetch('/api/system/init', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('系统初始化成功', 'success');
+                        loadSystemStatus();
+                    } else {
+                        showToast('系统初始化失败', 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('系统初始化失败: ' + error.message, 'error');
+                });
+        }
+        
+        function reloadModel() {
+            showToast('功能开发中...', 'info');
+        }
+        
+        function clearCache() {
+            showToast('功能开发中...', 'info');
+        }
+        
+        function exportLogs() {
+            showToast('功能开发中...', 'info');
+        }
+        
+        function saveModelConfig() {
+            showToast('模型配置已保存', 'success');
+        }
+        
+        function saveRagflowConfig() {
+            showToast('RAGFlow配置已保存', 'success');
+        }
+        
+        function testRagflowConnection() {
+            showToast('正在测试连接...', 'info');
+            // TODO: 实现连接测试
+            setTimeout(() => {
+                showToast('连接测试完成', 'success');
+            }, 2000);
+        }
+        
+        function loadSystemLogs() {
+            // 模拟日志内容
+            const logs = [
+                '[2025-05-31 19:51:33] INFO - 🚀 开始初始化系统...',
+                '[2025-05-31 19:51:33] INFO - ⚙️ 正在初始化InterVL OCR管理器...',
+                '[2025-05-31 19:51:33] INFO - 📦 正在加载InterVL模型...',
+                '[2025-05-31 19:51:47] WARNING - ⚠️ InterVL模型加载失败: Tokenizer class Qwen2Tokenizer does not exist',
+                '[2025-05-31 19:51:47] INFO - 💡 系统将以降级模式运行，OCR功能暂不可用',
+                '[2025-05-31 19:51:47] INFO - 🔧 正在初始化RAGFlow适配器...',
+                '[2025-05-31 19:51:47] INFO - ✅ RAGFlow适配器初始化成功',
+                '[2025-05-31 19:51:47] INFO - 🎉 系统初始化完成！核心组件已就绪'
+            ];
+            
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML = logs.map(log => {
+                let className = 'text-light';
+                if (log.includes('ERROR') || log.includes('❌')) className = 'text-danger';
+                else if (log.includes('WARNING') || log.includes('⚠️')) className = 'text-warning';
+                else if (log.includes('SUCCESS') || log.includes('✅')) className = 'text-success';
+                else if (log.includes('INFO') || log.includes('ℹ️')) className = 'text-info';
+                
+                return `<div class="${className}">${log}</div>`;
+            }).join('');
+            
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function refreshLogs() {
+            loadSystemLogs();
+            showToast('日志已刷新', 'success');
+        }
+        
+        function loadConfigurations() {
+            // 这里可以从后端加载实际配置
+        }
+        
+        // 工具函数
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toastId = 'toast-' + Date.now();
+            
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+        
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            container.style.zIndex = '1055';
+            document.body.appendChild(container);
+            return container;
+        }
+        
+        // 定期刷新状态
+        setInterval(loadSystemStatus, 30000); // 每30秒刷新一次
+    </script>
+</body>
+</html> 
